@@ -1,0 +1,411 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN" "http://www.ibatis.com/dtd/sql-map-2.dtd">
+<sqlMap namespace="IFMP">
+
+	<typeAlias alias="customerInfo" type="com.yqsh.ifmp.common.model.CustomerInfo"/>
+	<typeAlias alias="customerInfoQuery" type="com.yqsh.ifmp.common.model.CustomerInfoQuery"/>
+	<typeAlias alias="rechargeRecord" type="com.yqsh.ifmp.common.model.RechargeRecord"/>
+	<typeAlias alias="subsidizes" type="com.yqsh.ifmp.common.model.Subsidizes"/>
+	<typeAlias alias="dealDetailBody" type="com.yqsh.ifmp.model.DealDetailBody"/>
+	<typeAlias alias="searchQuery" type="com.yqsh.ifmp.common.model.SearchQuery"/>
+	<typeAlias alias="doorDetailBody" type="com.yqsh.ifmp.model.DoorDetailBody"/>
+	<typeAlias alias="attDetailBody" type="com.yqsh.ifmp.model.AttDetailBody"/>
+	<typeAlias alias="baseQuery" type="com.yqsh.ifmp.common.model.BaseQuery"/>
+	
+		<typeAlias alias="ammeterInfo" type="com.yqsh.ifmp.common.model.AmmeterInfo"/>
+	<typeAlias alias="buyQtyWater" type="com.yqsh.ifmp.common.model.BuyQtyWater"/>
+	
+	<sql id="other-condition">
+ 			<isNotNull prepend="and" property="deptCode"> t2.fDept = #deptCode#</isNotNull>
+ 		    <isNotNull prepend="and" property="account"> fAccount_id = #account#</isNotNull>
+ 		    <isNotNull prepend="and" property="idcardno"> fIDCard = #idcardno#</isNotNull>
+            <isNotNull prepend="and" property="begintime"> CONVERT(varchar(100), fCons_Time, 23) &gt;= #begintime#</isNotNull>
+            <isNotNull prepend="and" property="endtime"> CONVERT(varchar(100), fCons_Time, 23) &lt;= #endtime#</isNotNull>
+            <isNotNull prepend="and" property="customerno"> t2.fEmployeeCode = #customerno#</isNotNull>
+ 	</sql>
+ 	
+ 	<sql id="other-condition_door">
+ 			<isNotNull prepend="and" property="deptCode"> t4.fDept = #deptCode#</isNotNull>
+ 		    <isNotNull prepend="and" property="account"> t.fAccountID = #account#</isNotNull>
+ 		    <isNotNull prepend="and" property="idcardno"> t4.fIDCard = #idcardno#</isNotNull>
+            <isNotNull prepend="and" property="begintime"> CONVERT(varchar(100), fRecTime, 23) &gt;= #begintime#</isNotNull>
+            <isNotNull prepend="and" property="endtime"> CONVERT(varchar(100), fRecTime, 23) &lt;= #endtime#</isNotNull>
+ 	</sql>
+ 	
+	<sql id="other-condition_att">
+			<isNotNull prepend="and" property="deptCode"> t3.fDept = #deptCode#</isNotNull>
+ 		    <isNotNull prepend="and" property="account"> fAccountID = #account#</isNotNull>
+ 		    <isNotNull prepend="and" property="idcardno"> t3.fIDCard = #idcardno#</isNotNull>
+            <isNotNull prepend="and" property="begintime"> CONVERT(varchar(100), fRecordedTime, 23) &gt;= #begintime#</isNotNull>
+            <isNotNull prepend="and" property="endtime"> CONVERT(varchar(100), fRecordedTime, 23) &lt;= #endtime#</isNotNull>
+ 	</sql>
+ 	
+ 	<resultMap id="resultammeterInfo" class="ammeterInfo">
+          <result property="curDegree" column="CurDegree" jdbcType="VARCHAR" />
+          <result property="surQty" column="SurQty" jdbcType="VARCHAR" />
+	</resultMap>
+	
+	<resultMap id="resultbuyQtyWater" class="buyQtyWater">
+          <result property="conSumerId" column="ConSumerId" jdbcType="VARCHAR" />
+          <result property="billDate" column="BillDate" jdbcType="VARCHAR" />
+          <result property="roomName" column="RoomName" jdbcType="VARCHAR" />
+          <result property="quantity" column="Quantity" jdbcType="VARCHAR" />
+          <result property="price" column="Price" jdbcType="VARCHAR" />
+          <result property="total" column="Total" jdbcType="VARCHAR" />
+	</resultMap>
+	  
+	<resultMap id="customerInfoMap" class="customerInfo">
+          <result property="custNo" column="custNo" jdbcType="VARCHAR" />
+          <result property="sex" column="sex" jdbcType="VARCHAR" />
+          <result property="name" column="name" jdbcType="VARCHAR" />
+          <result property="accountId" column="accountId" jdbcType="VARCHAR" />
+          <result property="cardNo" column="cardNo" jdbcType="VARCHAR" />
+          <result property="deptName" column="deptName" jdbcType="VARCHAR" />
+          <result property="serialnumber" column="serialnumber" jdbcType="VARCHAR" />
+          <result property="cardState" column="cardState" jdbcType="VARCHAR" />
+	</resultMap>
+	
+	
+ 	
+	<select id="getAmmeterInfo" resultMap="resultammeterInfo" parameterClass="string">
+		select top 1 t.CurDegree,(t.CurSurBuyQty+t.CurSurSubQty) SurQty from [CCMMS].[dbo].[T_M_GetAmmeterRec] t left join [CCMMS].[dbo].[T_M_Consumer] m on t.Consumer_Id=m.Consumer_Id 
+		left join [CCMMS].[dbo].[T_M_Room] t3 on m.room_id=t3.Room_id
+		where t3.room_bh = #value#
+		 order by t.cons_time desc
+	</select>
+	<select id="countBuyQtyWater" resultClass="int" parameterClass="searchQuery">
+		select count(*)
+		from [CCMMS].[dbo].[T_M_Charge] t1 left join [CCMMS].[dbo].[T_M_Consumer] t2 on t1.Consumer_Id=t2.Consumer_Id
+		left Join [CCMMS].[dbo].[T_M_Room] t3 on t2.room_id=t3.Room_id
+		where t3.room_bh = #consumerId#
+	</select>
+	<select id="resultBuyQtyWater" resultMap="resultbuyQtyWater" parameterClass="searchQuery">
+		select row_.ConSumerId ConSumerId,row_.BillDate BillDate,row_.RoomName RoomName,row_.Quantity Quantity,row_.Price Price,row_.Total Total from (
+		select ROW_NUMBER() OVER (Order by t1.BillDate DESC ) AS RowNumber,
+		t3.room_bh ConSumerId,t1.BillDate BillDate,t3.Room_Name RoomName,t1.Quantity Quantity,t1.Price 
+		Price,t1.Total Total
+		from [CCMMS].[dbo].[T_M_Charge] t1 left join [CCMMS].[dbo].[T_M_Consumer] t2 on t1.Consumer_Id=t2.Consumer_Id
+		left Join [CCMMS].[dbo].[T_M_Room] t3 on t2.room_id=t3.Room_id
+		where t3.room_bh = #consumerId#
+		
+)row_ where RowNumber between #awStart# and #awEnd#
+	
+	</select>
+	<select id="countBatchCustomer" resultClass="int" >
+		select count(*)
+		from T_B_Employee t,T_B_Dept t1 
+		where t.fDept = t1.fDeptCode
+	</select>
+	
+	<select id="BatchCustomer" resultMap="customerInfoMap" parameterClass="baseQuery">
+		select row_.custNo,
+		row_.sex,
+		row_.name,
+		row_.accountId,
+		row_.cardNo,
+		row_.deptName,
+		row_.serialnumber, 
+		row_.cardState  from (
+		select ROW_NUMBER() OVER (Order by t.fAccountID DESC ) AS RowNumber,
+		t.fDept custNo,
+		t.fSex sex,
+		t.fName name,
+		t.fAccountID accountId,
+		t.fCardID cardNo,
+		t1.fDeptName deptName,
+		t.fSerialNo serialnumber,
+		case when t.fCard_state = 0 then 40 else 70 end cardState,
+		t.fKh_Money balance
+		from T_B_Employee t,T_B_Dept t1 
+		where t.fDept = t1.fDeptCode
+		
+)row_ where RowNumber between #awStart# and #awEnd#
+	
+	</select>
+	
+ 	
+	
+	<select id="getCustomer" resultClass="customerInfo" parameterClass="customerInfoQuery">
+		select 
+		t.fDept custNo,
+		t.fSex sex,
+		t.fName name,
+		t.fAccountID accountId,
+		t.fCardID cardNo,
+		t1.fDeptName deptName,
+		t.fDept deptId,
+		t.fSerialNo serialnumber,
+		case when t.fCard_state = 0 then 40 else 70 end cardState,
+		t.fKh_Money balance
+		from T_B_Employee t,T_B_Dept t1  
+		where t.fDept = t1.fDeptCode
+		<isNotNull prepend="and" property="account"> t.fAccountID = #account#</isNotNull>
+		<isNotNull prepend="and" property="cardno"> t.fCardID = #cardno#</isNotNull>
+		<isNotNull prepend="and" property="idcard"> t.fIDCard = #idcard#</isNotNull>
+		<isNotNull prepend="and" property="bankno"> t.fBankNo = #bankno#</isNotNull>
+		<isNotNull prepend="and" property="phone"> t.fMobilePhoneCode = #phone#</isNotNull>
+		<isNotNull prepend="and" property="number"> t.fEmployeeCode = #number#</isNotNull>
+		<isNotNull prepend="and" property="password"> t.fPassword = #password#</isNotNull>
+		<isNotNull prepend="and" property="fphysicalno"> t.fSerialNo = #fphysicalno#</isNotNull>
+	</select>
+	
+	<select id="checkOrderExist" resultClass="string" parameterClass="map">
+		select t.orderSeq from tb_yzf_record t where t.orderId = #orderId#
+		<isNotNull prepend="and" property="orderDate"> t.orderDate = #orderDate#</isNotNull>
+		<isNotNull prepend="and" property="merchantId"> t.merchantId = #merchantId#</isNotNull>
+		<isNotNull prepend="and" property="amount"> t.amount = #amount#</isNotNull>
+		<isNotNull prepend="and" property="custNo"> t.iccid = #custNo#</isNotNull>
+	</select>
+	
+	<insert id="saveRechargeRecord" parameterClass="rechargeRecord">
+		insert into tb_yzf_record (orderId,orderSeq,tranSeq,merchantId,phoneNumber,iccid,name,amount,orderDate,clientId,versionId,createDate,joinDesc,flag,dealTime,result) 
+		values (#orderId#,#orderSeq#,#tranSeq#,#merchantId#,#phoneNumber#,#iccid#,#name#,#amount#,#orderDate#,#clientId#,#versionId#,#createTime#,#join#,#flag#,#dealTime#,#result#)
+	</insert>
+	
+	<insert id="saveSubsidizes" parameterClass="subsidizes">
+		insert into T_C_Subsidizes (fAccountID,fSubMoney,fSubTime,fOperID,fReceived,fStartReceiveDate,fEndReceiveDate,fYear,fMonth,fClearSub,fSubID,fRequested)
+		values (#fAccountID#,#fSubMoney#,#fSubTime#,#fOperID#,#fReceived#,#fStartReceiveDate#,#fEndReceiveDate#,#fYear#,#fMonth#,#fClearSub#,#fSubID#,#fRequested#)
+	</insert>
+		
+	<update id="updateOrder" parameterClass="map">
+		update tb_yzf_record  set flag = #flag#,dealTime = #dealTime#,result = #result#
+		where orderId = #orderId# and merchantId = #merchantId#
+	</update>
+	
+	<update id="lostCard" parameterClass="string">
+		update T_B_Employee set fCard_state = 1 where fCardNo = #cardno#
+	</update>
+	
+	<procedure id="saveBlackAndWrite" parameterClass="map">
+		{call UP_RecordBAWList(#accountid#,#cardno#,#physicalNo#,0,#operType#,#listType#,#remark#)}
+	</procedure>
+	<parameterMap class="java.util.HashMap" id="deductionMap">
+		<parameter property="RecState" javaType="String" jdbcType="VARCHAR" mode="IN" />
+		<parameter property="AccountID" javaType="String" jdbcType="VARCHAR" mode="IN" />
+		<parameter property="SerialNo" javaType="String" jdbcType="VARCHAR" mode="IN" />
+		<parameter property="NewSerialNo" javaType="String" jdbcType="VARCHAR" mode="IN" />
+		<parameter property="PosId" javaType="String" jdbcType="VARCHAR" mode="IN" />
+		<parameter property="DpBh" javaType="String" jdbcType="VARCHAR" mode="IN" />
+		<parameter property="AppID" javaType="int" jdbcType="INT" mode="IN" />
+		<parameter property="RecType" javaType="String" jdbcType="VARCHAR" mode="IN" />
+		<parameter property="ConsTime" javaType="Date" jdbcType="DATETIME" mode="IN" />
+		<parameter property="GatherTime" javaType="Date" jdbcType="DATETIME" mode="IN" />
+		<parameter property="ConsFare" javaType="Double" jdbcType="NUMERIC" mode="IN" />
+		<parameter property="ConsO_1" javaType="Double" jdbcType="NUMERIC" mode="IN" />
+		<parameter property="ConsO_2" javaType="Double" jdbcType="NUMERIC" mode="IN" />
+		<parameter property="ConsO_3" javaType="Double" jdbcType="NUMERIC" mode="IN" />
+		<parameter property="ConsO_4" javaType="Double" jdbcType="NUMERIC" mode="IN" />
+		<parameter property="Oper_id" javaType="String" jdbcType="VARCHAR" mode="IN" />
+		<parameter property="Meal_id" javaType="String" jdbcType="VARCHAR" mode="IN" />
+		<parameter property="Station_id" javaType="String" jdbcType="VARCHAR" mode="IN" />
+		<parameter property="GoodsID" javaType="int" jdbcType="INT" mode="IN" />
+		<parameter property="GoodsCount" javaType="int" jdbcType="INT" mode="IN" />
+		<parameter property="fRecKey" javaType="String" jdbcType="VARCHAR" mode="IN" />
+		<parameter property="Ret" javaType="String" jdbcType="VARCHAR" mode="OUT" />
+	</parameterMap>
+	<procedure id="deduction" parameterMap="deductionMap">
+		{call sp_InsertWstData(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)}
+	</procedure>
+	
+	<resultMap id="resultDealDetailRecord" class="dealDetailBody">
+            <result property="account" column="account" jdbcType="VARCHAR" />
+            <result property="cardno" column="cardno" jdbcType="VARCHAR" />
+            <result property="name" column="name" jdbcType="VARCHAR" />
+            <result property="prebalance" column="prebalance" jdbcType="VARCHAR" />
+            <result property="money" column="money" jdbcType="VARCHAR" />
+            <result property="curbalance" column="curbalance" jdbcType="VARCHAR" />
+            <result property="tradetype" column="tradetype" jdbcType="VARCHAR" />
+            <result property="pursetype" column="pursetype" jdbcType="VARCHAR" />
+            <result property="tradetime" column="tradetime" jdbcType="VARCHAR" />
+            <result property="posid" column="posid" jdbcType="VARCHAR" />
+	</resultMap>
+	
+	<!-- 账单明细 -->
+ 	<select id="countDealDetail" resultClass="int" parameterClass="searchQuery">
+		SELECT count(*)
+		  from $tableName$ t,T_C_ConsState t1,T_B_Employee t2
+		where t.fCons_State = t1.fStateID	
+		and t.fAccount_id = t2.fAccountID
+		<include refid="other-condition" />
+	</select>
+
+	<select id="queryDealDetailRecord" resultMap="resultDealDetailRecord" parameterClass="searchQuery">
+		select top $pageSize$ t2.fEmployeeCode account,
+			t.fCard_Number cardno,
+      		t2.fName name,
+			t.fOdd_Money prebalance,
+			t.fCons_Fare money,
+			t.fX_Money curbalance,
+			t1.fStateName tradetype,
+			'现金' pursetype,
+			CONVERT(varchar(100), t.fCons_Time, 120) tradetime,
+			t.fPos_id posid
+		from $tableName$ t,T_C_ConsState t1,T_B_Employee t2
+		where t.fCons_State = t1.fStateID
+    	and t.fAccount_id = t2.fAccountID
+		and t.fAutoId not in (select top $start$ fAutoId from $tableName$ where 1 = 1 
+		<include refid="other-condition" />
+		order by fCons_Time)
+		<include refid="other-condition" />
+		order by t.fCons_Time
+	</select>
+	
+	<resultMap id="resultDoorRecord" class="doorDetailBody">
+            <result property="account" column="account" jdbcType="VARCHAR" />
+            <result property="cardno" column="cardno" jdbcType="VARCHAR" />
+            <result property="name" column="name" jdbcType="VARCHAR" />
+            <result property="termname" column="termname" jdbcType="VARCHAR" />
+            <result property="doorname" column="doorname" jdbcType="VARCHAR" />
+            <result property="rectime" column="rectime" jdbcType="VARCHAR" />
+	</resultMap>
+	
+	<!-- 门禁记录 -->	
+	<select id="countDoorRecord" resultClass="int" parameterClass="searchQuery">
+		SELECT count(*)
+		  from $tableName$ t,T_B_Pos t1,T_E_Door t2,T_E_RecType t3,T_B_Employee t4
+		where t.fPosID = t1.fPosID 
+		and t.fDoorID = t2.fDoorID 
+		and t.fRecType = t3.fTypeID
+		and t.fAccountID = t4.fAccountID
+		and t.fRecType = 1
+		 <include refid="other-condition_door" />
+	</select>
+	
+	<select id="queryDoorRecord" resultMap="resultDoorRecord" parameterClass="searchQuery">
+		select top $pageSize$ t.fAccountID account,
+				 t.fCardNo cardno,
+				 t4.fName name,
+			   t1.fPosName termname,
+			   t2.fDoorName doorname,
+			   CONVERT(varchar(100), t.fRecTime, 120) rectime
+		from $tableName$ t,T_B_Pos t1,T_E_Door t2,T_E_RecType t3,T_B_Employee t4
+		where t.fPosID = t1.fPosID 
+		and t2.fPosID = t1.fPosID
+		and t.fDoorID = t2.fDoorID 
+		and t.fRecType = t3.fTypeID 
+    	and t.fAccountID = t4.fAccountID 
+		and t.fRecType = 1
+		and t.fKeyID not in (select top $start$ fKeyID from $tableName$ where fRecType = 1
+		<include refid="other-condition_door" />
+		order by fRecTime)
+		<include refid="other-condition_door" />
+		order by t.fRecTime
+	</select>
+	
+	<resultMap id="resultAttendanceRecord" class="attDetailBody">
+            <result property="account" column="account" jdbcType="VARCHAR" />
+            <result property="cardno" column="cardno" jdbcType="VARCHAR" />
+            <result property="name" column="name" jdbcType="VARCHAR" />
+            <result property="termname" column="termname" jdbcType="VARCHAR" />
+            <result property="rectime" column="rectime" jdbcType="VARCHAR" />
+            <result property="flowtype" column="flowtype" jdbcType="VARCHAR" />
+	</resultMap>
+	
+	<!-- 考勤记录 -->
+	<select id="countAttDetail" resultClass="int" parameterClass="searchQuery">
+		SELECT count(*)
+		  from $tableName$ t,T_B_POS t1,T_A_RecType t2,T_B_Employee t3
+			where t.fPosID = t1.fPosID and t.fRecordedType = t2.fTypeID
+			and t.fAccountID = t3.fAccountID
+			and t2.fTypeID in (1,9)	
+		<include refid="other-condition_att" />
+	</select>
+
+	<select id="queryAttDetailRecord" resultMap="resultAttendanceRecord" parameterClass="searchQuery">
+		  select top $pageSize$ t3.fName name,
+			     t1.fPosName termname,
+			     t.fAccountID account,
+           		 t.fCardNo cardno,
+			     t2.fTypeName flowtype,
+			     CONVERT(varchar(100), t.fRecordedTime, 120) rectime
+			from $tableName$ t,T_B_POS t1,T_A_RecType t2,T_B_Employee t3
+			where t.fPosID = t1.fPosID and t.fRecordedType = t2.fTypeID
+			and t.fAccountID = t3.fAccountID
+			and t2.fTypeID in (1,9)
+			and t.fKeyID not in (select top $start$ fKeyID from $tableName$ where 1 = 1 
+			<include refid="other-condition_att" />
+			order by fRecordedTime)
+			<include refid="other-condition_att" />
+		  order by t.fRecordedTime
+	</select>
+	
+	
+	<resultMap id="resultDealDetail" class="dealDetailBody">
+            <result property="account" column="account" jdbcType="VARCHAR" />
+            <result property="cardno" column="cardno" jdbcType="VARCHAR" />
+            <result property="name" column="name" jdbcType="VARCHAR" />
+            <result property="prebalance" column="prebalance" jdbcType="VARCHAR" />
+            <result property="money" column="money" jdbcType="VARCHAR" />
+            <result property="curbalance" column="curbalance" jdbcType="VARCHAR" />
+            <result property="tradetype" column="tradetype" jdbcType="VARCHAR" />
+            <result property="pursetype" column="pursetype" jdbcType="VARCHAR" />
+            <result property="tradetime" column="tradetime" jdbcType="VARCHAR" />
+            <result property="posid" column="posid" jdbcType="VARCHAR" />
+            <result property="flowno" column="fAutoId" jdbcType="VARCHAR" />
+	</resultMap>
+	
+	<select id="queryDealDetail" resultMap="resultDealDetail" parameterClass="map">
+		select top $number$ t2.fEmployeeCode account,
+			t.fCard_Number cardno,
+      		t2.fName name,
+			t.fOdd_Money prebalance,
+			t.fCons_Fare money,
+			t.fX_Money curbalance,
+			t1.fStateName tradetype,
+			'现金' pursetype,
+			CONVERT(varchar(100), t.fCons_Time, 120) tradetime,
+			t.fPos_id posid,
+			t.fAutoId
+		from $tableName$ t,T_C_ConsState t1,T_B_Employee t2
+		where t.fCons_State = t1.fStateID
+    	and t.fAccount_id = t2.fAccountID
+		and t.fAutoId &gt; #startno#
+		<isNotNull prepend="and" property="begintime"> CONVERT(varchar(100), fCons_Time, 23) &gt;= #begintime#</isNotNull>
+        <isNotNull prepend="and" property="endtime"> CONVERT(varchar(100), fCons_Time, 23) &lt;= #endtime#</isNotNull>
+		order by t.fAutoId
+	</select>
+	
+	<insert id="insertOrg" parameterClass="com.yqsh.ifmp.model.SynOrgRequest">
+		insert into T_b_dept (fDeptCode,fDeptName,fDeptLevel,fDeptID) values (#orgcode#,#orgname#,#level#,(select case when max(fDeptID) is null then 1 else max(fDeptID)+1 end from T_b_dept))
+	</insert>
+	<update id="updateOrg" parameterClass="com.yqsh.ifmp.model.SynOrgRequest">
+		update T_B_Dept set fDeptName = #orgname# where fDeptCode = #orgcode#
+	</update>
+	<select id="getOrgByCode" resultClass="int">
+		select count(fDeptID) from T_B_Dept where fDeptCode = #value#
+	</select>
+	
+	<insert id="insertCustomer" parameterClass="com.yqsh.ifmp.model.SynCustomerRequest">
+		insert into T_B_Employee (fAccountID,fEmployeeCode,fName,fIDCard,fSex,fDept,fMobilePhoneCode,fChecked,fState,fCard_State,fPass_True,fEnterDate,fId_TypeId) 
+		values (#fAccountID#,#custno#,#name#,#idcard#,#sex#,#orgcode#,#phone#,0,0,3,1,'1980-01-01 00:00:00',1)
+	</insert>
+	<update id="updateCustomer" parameterClass="com.yqsh.ifmp.model.SynCustomerRequest">
+		update T_B_Employee set fEmployeeCode=#custno#,fName=#name#,fSex=#sex#,fDept=#orgcode#,fMobilePhoneCode=#phone#
+		where fIDCard = #idcard#
+	</update>
+	<delete id="deleteCustomer">
+		delete from T_B_Employee where fIDCard = #value#
+	</delete>
+	<select id="getCustomerByIdcard" resultClass="string">
+		select top 1 fAccountID from T_B_Employee where fIDCard = #value# 
+	</select>
+	<select id="getMaxAccountID" resultClass="string">
+		select max(fAccountID) from T_B_Employee
+	</select>
+	<select id="getCustomerIsCreateCard" resultClass="int">
+		select count(fAccountID) from T_B_Employee where fIDCard = #value# and fCardNo is not null
+	</select>
+	
+	<insert id="insertCustomerPic" parameterClass="com.yqsh.ifmp.common.model.CustPhoto">
+	<!-- ,handler=org.springframework.orm.ibatis.support.BlobByteArrayTypeHandler -->
+		<![CDATA[
+			insert into T_B_Photos (fAccountID,fPhoto) values (#fAccountID#,#fPhoto#)
+		]]>
+	</insert>
+	<update id="updateCustomerPic" parameterClass="com.yqsh.ifmp.common.model.CustPhoto">
+		update T_B_Photos set fPhoto=#fPhoto# where fAccountID=#fAccountID#
+	</update>
+	<select id="getCustomerPicCount" resultClass="int" parameterClass="com.yqsh.ifmp.common.model.CustPhoto">
+		select count(fAccountID) from T_B_Photos where fAccountID=#fAccountID#
+	</select>
+</sqlMap>

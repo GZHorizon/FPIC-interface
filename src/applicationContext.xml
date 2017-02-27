@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:jdbc="http://www.springframework.org/schema/jdbc"
+	xsi:schemaLocation="  
+            http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd  
+            http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.0.xsd  
+            http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.0.xsd  
+            http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-3.0.xsd
+            http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc-3.0.xsd">
+
+   <!--  <bean id="finSubsidyConfig" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="fileEncoding" value="UTF-8"/>
+        <property name="location" value="classpath:parameter.properties"></property>
+    </bean> -->
+    
+	<bean
+		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="locations">
+			<list>
+				<value>classpath:config.properties</value>
+				<value>classpath:ftp.properties</value>
+				<value>classpath:parameter.properties</value>
+			</list>
+		</property>
+	</bean>
+
+	<!-- 定义上下文返回的消息的国际化。 -->
+	<bean id="messageSource"
+		class="org.springframework.context.support.ReloadableResourceBundleMessageSource">
+		<property name="basename"
+			value="classpath:org/springframework/security/messages_zh_CN" />
+	</bean>
+
+	<!-- DataSource数据源 -->
+	<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource"
+		destroy-method="close">
+		<property name="driverClassName">
+			<value>${jdbc.drivername}</value>
+		</property>
+		<property name="url">
+			<value>${jdbc.url}</value>
+		</property>
+		<property name="username">
+			<value>${jdbc.username}</value>
+		</property>
+		<property name="password">
+			<value>${jdbc.password}</value>
+		</property>
+	</bean>
+
+	<!-- Spring iBatis SqlMapClient -->
+	<bean id="sqlMapClient" class="org.springframework.orm.ibatis.SqlMapClientFactoryBean">
+		<property name="configLocation">
+			<value>classpath:sqlmap-config.xml</value>
+		</property>
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+	
+	
+	<!-- AWDataSource水电表数据源 -->
+	<bean id="aWDataSource" class="org.apache.commons.dbcp.BasicDataSource"
+		destroy-method="close">
+		<property name="driverClassName">
+			<value>${jdbc.drivername.aw}</value>
+		</property>
+		<property name="url">
+			<value>${jdbc.url.aw}</value>
+		</property>
+		<property name="username">
+			<value>${jdbc.username.aw}</value>
+		</property>
+		<property name="password">
+			<value>${jdbc.password.aw}</value>
+		</property>
+	</bean>
+
+	<!-- Spring iBatis SqlMapClient -->
+	<bean id="aWSqlMapClient" class="org.springframework.orm.ibatis.SqlMapClientFactoryBean">
+		<property name="configLocation">
+			<value>classpath:sqlmap-config.xml</value>
+		</property>
+		<property name="DataSource" ref="aWDataSource" />
+	</bean>
+
+	<tx:annotation-driven />
+
+	<!--事务管理DataSourceTransactionManager -->
+	<bean id="transactionManager"
+		class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+
+	<context:component-scan base-package="com.yqsh">
+		<!-- <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller" 
+			/> <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Service" 
+			/> -->
+	</context:component-scan>
+
+	<!-- 使用标准ANSIIX99计算MAC的密钥 -->
+	<bean id="macKey" class="java.lang.String" >
+		<constructor-arg index="0" value="3132333435363738" />
+	</bean>
+	<!-- 第三方UUID -->
+	<bean id="uuid" class="java.lang.String" >
+		<constructor-arg index="0" value="7354B92D9A4E4794887B836A14B43A1C" />
+	</bean>
+	
+	<bean id="adminId" class="java.lang.String" >
+		<constructor-arg index="0" value="111" />
+	</bean>
+	<!-- 同步信息校验报文固定MAC -->
+	<bean id="synMac" class="java.lang.String">
+		<constructor-arg index="0" value="3132333435363738" />
+	</bean>
+	
+	<!-- 当前项目是否为新卡结构 -->
+    <bean id="isNewCard" class="java.lang.String" >
+		<constructor-arg index="0" value="0" />
+	</bean>
+	<!-- 是否采用固定MAC -->
+	<bean id="isGdMac" class="java.lang.Boolean" >
+		<constructor-arg index="0" value="false" />
+	</bean>
+</beans>

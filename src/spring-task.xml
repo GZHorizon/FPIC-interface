@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:aop="http://www.springframework.org/schema/aop" 
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+       http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+       http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd">
+
+	<bean name="timerJob" class="com.yqsh.ifmp.pub.ReconciliationTask">
+		<property name="merchantId" value="F6CD4B83453E4D24982D16DDCCC65193"></property><!-- 商户代码 -->
+		<property name="hostname" value="${ftp.hostname}"></property><!-- FTP地址 -->
+		<property name="port" value="${ftp.port}"></property><!-- FTP端口 -->
+		<property name="username" value="${ftp.username}"></property><!-- 用户名 -->
+		<property name="password" value="${ftp.password}"></property><!-- 密码 -->
+		<property name="remoteDir" value="${ftp.remoteDir}"></property><!-- 远程目录 -->
+		<property name="srcDir" value="${ftp.srcDir}"></property><!-- 本地目录 -->
+	</bean>
+
+	<bean name="jobtask" class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
+		<property name="targetObject">
+            <ref bean="timerJob" />
+        </property>
+        <!-- 调用类中的方法 -->
+        <property name="targetMethod">
+            <value>execute</value>
+        </property>
+	</bean>
+
+	<bean name="doTime" class="org.springframework.scheduling.quartz.CronTriggerBean">
+		<property name="jobDetail" ref="jobtask"></property>
+		<property name="cronExpression">
+            <value>0 * 9-20 * * ?</value>
+        </property>
+	</bean>
+	
+	
+	
+	<!-- <bean name="sendTimerJob" class="com.yqsh.ykt.yzf.service.impl.SendDzFileTask">
+		<property name="merchantId" value="02610105035713000"></property>商户代码
+		<property name="hostname" value="${send.ftp.hostname}"></property>FTP地址
+		<property name="port" value="${send.ftp.port}"></property>FTP端口
+		<property name="username" value="${send.ftp.username}"></property>用户名
+		<property name="password" value="${send.ftp.password}"></property>密码
+		<property name="remoteDir" value="${send.ftp.remoteDir}"></property>远程目录
+	</bean>
+
+	<bean name="sendJobtask" class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
+		<property name="targetObject">
+            <ref bean="sendTimerJob" />
+        </property>
+        调用类中的方法
+        <property name="targetMethod">
+            <value>execute</value>
+        </property>
+	</bean>
+
+	<bean name="sendDoTime" class="org.springframework.scheduling.quartz.CronTriggerBean">
+		<property name="jobDetail" ref="sendJobtask"></property>
+		<property name="cronExpression">
+            <value>0 0 9 * * ?</value>每天9点开始上传昨天的对账文件
+        </property>
+	</bean> -->
+	
+	 <!-- 总管理类 如果将lazy-init='false'那么容器启动就会执行调度程序  -->
+    <bean id="startQuertz" lazy-init="false" autowire="no"
+        class="org.springframework.scheduling.quartz.SchedulerFactoryBean">
+        <property name="triggers">
+            <list>
+                <ref bean="doTime" />
+            </list>
+        </property>
+    </bean>
+
+</beans>

@@ -1,0 +1,522 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN" "http://www.ibatis.com/dtd/sql-map-2.dtd">
+<sqlMap namespace="Nifmp">
+
+	<typeAlias alias="customerInfo" type="com.yqsh.ifmp.common.model.CustomerInfo"/>
+	<typeAlias alias="customerInfoQuery" type="com.yqsh.ifmp.common.model.CustomerInfoQuery"/>
+	<typeAlias alias="rechargeRecord" type="com.yqsh.ifmp.common.model.RechargeRecord"/>
+	<typeAlias alias="subsidizes" type="com.yqsh.ifmp.common.model.TransferenceRecord"/>
+
+	<typeAlias alias="dealDetailBody" type="com.yqsh.ifmp.model.DealDetailBody"/>
+	<typeAlias alias="searchQuery" type="com.yqsh.ifmp.common.model.SearchQuery"/>
+	<typeAlias alias="doorDetailBody" type="com.yqsh.ifmp.model.DoorDetailBody"/>
+	<typeAlias alias="attDetailBody" type="com.yqsh.ifmp.model.AttDetailBody"/>
+
+	<typeAlias alias="operator" type="com.yqsh.ifmp.common.model.Operator"/>
+	<typeAlias alias="accountRole" type="com.yqsh.ifmp.common.model.AccountRole"/>
+
+	<typeAlias alias="subsidyDetailBody" type="com.yqsh.ifmp.model.SubsidyDetailBody"/>
+	
+	<typeAlias alias="ammeterInfo" type="com.yqsh.ifmp.common.model.AmmeterInfo"/>
+	<typeAlias alias="buyQtyWater" type="com.yqsh.ifmp.common.model.BuyQtyWater"/>
+
+	<typeAlias alias="blackInfo" type="com.yqsh.ifmp.common.model.BlackInfo"/>
+	
+	
+	
+	<sql id="other-condition">
+			<isNotNull prepend="and" property="physicscardno"> t2.batchphysicscardno = #physicscardno#</isNotNull>
+ 			<isNotNull prepend="and" property="deptCode"> t1.customerdept = #deptCode#</isNotNull>
+ 		    <isNotNull prepend="and" property="account"> t.custom_id = #account#</isNotNull>
+            <isNotNull prepend="and" property="begintime"> to_char(t.deal_time,'yyyy-MM-dd') &gt;= #begintime#</isNotNull>
+            <isNotNull prepend="and" property="endtime"> to_char(t.deal_time,'yyyy-MM-dd') &lt;= #endtime#</isNotNull>
+            <isNotNull prepend="and" property="cardno"> T4.CARDNO = #cardno#</isNotNull>
+            <isNotNull prepend="and" property="customerno"> T1.CUSTOMERINDUSTRYNO = #customerno#</isNotNull>
+ 	</sql>
+ 	
+ 	<sql id="other-condition_door">
+ 			<isNotNull prepend="and" property="physicscardno"> t3.batchphysicscardno = #physicscardno#</isNotNull>
+ 			<isNotNull prepend="and" property="deptCode"> t2.customerdept = #deptCode#</isNotNull>
+ 		    <isNotNull prepend="and" property="account"> t1.tbasmaccount_id = #account#</isNotNull>
+            <isNotNull prepend="and" property="begintime"> to_char(t.open_door_time,'yyyy-MM-dd') &gt;= #begintime#</isNotNull>
+            <isNotNull prepend="and" property="endtime"> to_char(t.open_door_time,'yyyy-MM-dd') &lt;= #endtime#</isNotNull>
+ 	</sql>
+ 	
+	<sql id="other-condition_att">
+			<isNotNull prepend="and" property="physicscardno"> t3.batchphysicscardno = #physicscardno#</isNotNull>
+			<isNotNull prepend="and" property="deptCode"> t2.customerdept = #deptCode#</isNotNull>
+ 		    <isNotNull prepend="and" property="account"> t.account_id = #account#</isNotNull>
+            <isNotNull prepend="and" property="begintime"> to_char(t.deal_time,'yyyy-MM-dd') &gt;= #begintime#</isNotNull>
+            <isNotNull prepend="and" property="endtime"> to_char(t.deal_time,'yyyy-MM-dd') &lt;= #endtime#</isNotNull>
+ 	</sql>
+ 	
+ 	<sql id="other-condition_sub">
+			<isNotNull prepend="and" property="customerno"> T1.ICCID = #customerno#</isNotNull>
+			<isNotNull prepend="and" property="begintime"> to_char(to_date(t1.orderdate,'yyyy-MM-dd HH24:mi:ss'),'yyyy-MM-dd') &gt;= #begintime#</isNotNull>
+			<isNotNull prepend="and" property="endtime"> to_char(to_date(t1.orderdate,'yyyy-MM-dd HH24:mi:ss'),'yyyy-MM-dd') &lt;= #endtime#</isNotNull>
+ 	</sql>
+	
+	<!-- 1、获取人员信息 -->
+	<select id="getCustomer" resultClass="customerInfo" parameterClass="customerInfoQuery">
+		SELECT T.CARDNO,
+	           T1.CUSTOMERINDUSTRYNO CUSTNO,
+	           T1.CUSTOMERNAME NAME,
+	           T1.CUSTOMERID ACCOUNTID,
+	           T2.ORGANIZE_NAME DEPTNAME,
+	           (T3.DEPOSIT_BALANCE+(select decode(sum(MONEY),NULL,0,SUM(money)) from fin_qc_data_info where CUSTOMERID=T1.CUSTOMERID and IS_DOWN=0)) BALANCE1,
+	           T3.SUBSIDY_BALANCE BALANCE2,	 
+	           (SELECT TT.DEPOSIT_BALANCE FROM FIN_CUSTOMER_APP_ACCOUNT TT WHERE TT.CUSTOM_ID=T1.CUSTOMERID AND TT.APP_NO=3) BALANCE3,
+	           T.CARDSTAT CARDSTATE,
+	           decode(t1.customersex,'19_000001','男','19_000002','女','未知') sex,
+	           T5.BATCHPHYSICSCARDNO SERIALNUMBER,
+	           t.cardtypeid,
+	           t6.appsyscode appid,
+	           t1.CUSTOMERINDUSTRYNO custNo,
+	           t1.CUSTOMERMOBILE mphone,
+	           t1.CUSTOMERCERTNO idcard
+	      FROM TBCARDINFO               T,
+	           TB_CUSTOMER_INFO         T1,
+	           TBBASEORGANIZE           T2,
+	           FIN_CUSTOMER_APP_ACCOUNT T3,
+	           TBAPPSYSINFO             T4,
+	           TBBATCHCARDINFO          T5,
+	           tbcardappbindinginfo t6
+	     WHERE T.TBASMACCOUNT_ID = T1.CUSTOMERID
+	       AND T1.CUSTOMERDEPT = T2.ORGANIZE_ID(+)
+	       AND T.CARDNO = T3.CARD_NO
+	       AND T3.APP_NO = T4.APPSYSCODE
+	       AND T.PHYSICSCARDNO = T5.ID
+	       AND t.cardno = t6.cardno
+	       AND t6.appsyscode = t4.appsyscode
+	       AND T4.APPTYPEID = 2
+	       and T3.APP_NO = 2
+		<isNotNull prepend="and" property="account"> T1.CUSTOMERID = #account#</isNotNull>
+		<isNotNull prepend="and" property="cardno"> T.CARDNO = #cardno#</isNotNull>
+		<isNotNull prepend="and" property="idcard"> t1.customercertno = #idcard#</isNotNull>
+		<isNotNull prepend="and" property="bankno"> t1.fbankno = #bankno#</isNotNull>
+		<isNotNull prepend="and" property="phone"> t1.customermobile = #phone#</isNotNull>
+		<isNotNull prepend="and" property="number"> T1.CUSTOMERINDUSTRYNO = #number#</isNotNull>
+	</select>
+	<!-- 2、保存圈存充值记录 -->
+	<insert id="saveRechargeRecord" parameterClass="rechargeRecord">
+		insert into tb_yzf_record (orderId,orderSeq,tranSeq,merchantId,phoneNumber,iccid,name,amount,orderDate,clientId,versionId,createDate,joinDesc,flag,dealTime,result) 
+		values (#orderId#,#orderSeq#,#tranSeq#,#merchantId#,#phoneNumber#,#iccid#,#name#,#amount#,#orderDate#,#clientId#,#versionId#,#createTime#,#join#,#flag#,#dealTime#,#result#)
+	</insert>
+	<!-- 3、保存圈存数据 -->
+	<insert id="saveSubsidizes" parameterClass="subsidizes">
+		INSERT INTO FIN_QC_DATA_INFO
+		  (id,customerid,allow_time,stop_time,is_down,money,card_no,fee_date,create_time,version_no,clcard_no,phycardno,joindesc,sourceid) 
+		VALUES
+		  (SEQ_FIN_QC_DATA_INFO.NEXTVAL,#customerId#,#allowTime#,#stopTime#,#isDown#,#money#,#cardNo#,#feeDate#,#createTime#,#versionNo#,#clcardNo#,#phycardNo#,#joinDesc#,#sourceId#)
+	</insert>
+    <!-- 4、检查订单号是否存在 -->
+    <select id="checkOrderExist" resultClass="string" parameterClass="map">
+		select t.orderSeq from tb_yzf_record t where t.orderId = #orderId#
+		<isNotNull prepend="and" property="orderDate"> t.orderDate = #orderDate#</isNotNull>
+		<isNotNull prepend="and" property="merchantId"> t.merchantId = #merchantId#</isNotNull>
+		<isNotNull prepend="and" property="amount"> t.amount = #amount#</isNotNull>
+		<isNotNull prepend="and" property="custNo"> t.iccid = #custNo#</isNotNull>
+	</select>
+	<!-- 5、根据逻辑卡号查找物理卡号 -->
+	<select id="getPhycardNo" resultClass="string" parameterClass="map">
+	select bt.batchphysicscardno from tbcardinfo t, tbbatchcardinfo bt, tb_customer_info cust
+    where t.physicscardno = bt.id and t.tbasmaccount_id = cust.customerid and t.cardno = #cardNo#
+	</select>
+	<select id="getVersionNo" resultClass="int" parameterClass="map">
+	 select GET_CARD_RECHARGE_NO(#cardNo#) FROM dual
+	</select>
+	
+	<resultMap id="resultammeterInfo" class="ammeterInfo">
+          <result property="curDegree" column="CurDegree" jdbcType="VARCHAR" />
+          <result property="surQty" column="SurQty" jdbcType="VARCHAR" />
+	</resultMap>
+	
+	<resultMap id="resultbuyQtyWater" class="buyQtyWater">
+          <result property="conSumerId" column="ConSumerId" jdbcType="VARCHAR" />
+          <result property="billDate" column="BillDate" jdbcType="VARCHAR" />
+          <result property="roomName" column="RoomName" jdbcType="VARCHAR" />
+          <result property="quantity" column="Quantity" jdbcType="VARCHAR" />
+          <result property="price" column="Price" jdbcType="VARCHAR" />
+          <result property="total" column="Total" jdbcType="VARCHAR" />
+	</resultMap>
+ 	
+	<select id="getAmmeterInfo" resultMap="resultammeterInfo" parameterClass="string">
+		select top 1 t.CurDegree,(t.CurSurBuyQty+t.CurSurSubQty) SurQty from [CCMMS].[dbo].[T_M_GetAmmeterRec] t left join [CCMMS].[dbo].[T_M_Consumer] m on t.Consumer_Id=m.Consumer_Id 
+		left join [CCMMS].[dbo].[T_M_Room] t3 on m.room_id=t3.Room_id
+		where t3.room_bh = #value#
+		 order by t.cons_time desc
+	</select>
+	<select id="countBuyQtyWater" resultClass="int" parameterClass="searchQuery">
+		select count(*)
+		from [CCMMS].[dbo].[T_M_Charge] t1 left join [CCMMS].[dbo].[T_M_Consumer] t2 on t1.Consumer_Id=t2.Consumer_Id
+		left Join [CCMMS].[dbo].[T_M_Room] t3 on t2.room_id=t3.Room_id
+		where t3.room_bh = #consumerId#
+	</select>
+	<select id="resultBuyQtyWater" resultMap="resultbuyQtyWater" parameterClass="searchQuery">
+		select row_.ConSumerId ConSumerId,row_.BillDate BillDate,row_.RoomName RoomName,row_.Quantity Quantity,row_.Price Price,row_.Total Total from (
+		select ROW_NUMBER() OVER (Order by t1.BillDate DESC ) AS RowNumber,
+		t3.room_bh ConSumerId,t1.BillDate BillDate,t3.Room_Name RoomName,t1.Quantity Quantity,t1.Price 
+		Price,t1.Total Total
+		from [CCMMS].[dbo].[T_M_Charge] t1 left join [CCMMS].[dbo].[T_M_Consumer] t2 on t1.Consumer_Id=t2.Consumer_Id
+		left Join [CCMMS].[dbo].[T_M_Room] t3 on t2.room_id=t3.Room_id
+		where t3.room_bh = #consumerId#
+		)row_ where RowNumber between #awStart# and #awEnd#
+	</select>
+	
+	<update id="lostCard" parameterClass="string">
+		UPDATE tbcardinfo t SET t.cardstat = 70 WHERE t.cardno = #cardno#
+	</update>
+	
+	<procedure  id="saveBlackAndWrite" parameterClass="map">
+	   INSERT INTO tb_black_info
+         (black_id, card_no, reason, create_time, account_id, term_type, physicscardno, TYPE)
+       VALUES
+         (seq_tbblackinfo.nextval, #cardno#, '卡片挂失-接口', sysdate, #accountid#, 'ALL', #physicalNo#, 0);
+	</procedure >
+	
+	<insert id="insertBlackInfo" parameterClass="blackInfo">
+		<selectKey resultClass="int" keyProperty="id">
+		 SELECT	SEQ_TBBLACKINFO.NEXTVAL AS ID FROM DUAL
+		</selectKey>
+	 	insert into TB_BLACK_INFO( BLACK_ID,CARD_NO,REASON,CREATE_TIME,ACCOUNT_ID,TERM_TYPE,physicscardno ) values (#id:INTEGER#,#cardNo:VARCHAR#,#reason:VARCHAR#,#createTime:TIMESTAMP#,#accountId:NUMERIC#,#termType:VARCHAR#,#physicscardno# )
+	</insert>
+	
+	
+	<resultMap id="resultDealDetailRecord" class="dealDetailBody">
+            <result property="account" column="account" jdbcType="VARCHAR" />
+            <result property="cardno" column="cardno" jdbcType="VARCHAR" />
+            <result property="name" column="name" jdbcType="VARCHAR" />
+            <result property="prebalance" column="prebalance" jdbcType="VARCHAR" />
+            <result property="money" column="money" jdbcType="VARCHAR" />
+            <result property="curbalance" column="curbalance" jdbcType="VARCHAR" />
+            <result property="tradetype" column="tradetype" jdbcType="VARCHAR" />
+            <result property="pursetype" column="pursetype" jdbcType="VARCHAR" />
+            <result property="tradetime" column="tradetime" jdbcType="VARCHAR" />
+            <result property="posid" column="posid" jdbcType="VARCHAR" />
+	</resultMap>
+	
+	<!-- 账单明细 -->
+ 	<select id="countDealDetail" resultClass="int" parameterClass="searchQuery">
+		SELECT COUNT(t.squence_id) FROM $tableName$ t,tb_customer_info t1,fin_dealcode_cfg t2,tbcardinfo t4,tbbatchcardinfo t3
+		WHERE t.custom_id = t1.customerid
+		AND t.deal_code = t2.business_code_id
+		AND t1.customerid = t4.tbasmaccount_id
+     	AND t4.physicscardno = t3.id
+		<include refid="other-condition" />
+	</select>
+
+	<select id="queryDealDetailRecord" resultMap="resultDealDetailRecord" parameterClass="searchQuery">
+		select * from (select row_.*, rownum rownum_ from (
+			SELECT T.CUSTOM_ID ACCOUNT,
+		       T.CARD_NO cardno,
+		       t1.customername name,
+		       T.PRE_CARD_BALANCE prebalance,
+		       T.CUR_CARD_CONSUMPTION money,
+		       T.CUR_CARD_BALANCE curbalance,
+		       t2.business_code_name tradetype,
+		       '现金' pursetype,
+		       to_char(t.deal_time,'yyyy-MM-dd HH24:mi:ss') tradetime,
+		       t.terminal_id posid
+		  FROM $tableName$ T, TB_CUSTOMER_INFO T1,fin_dealcode_cfg t2,tbcardinfo t4,tbbatchcardinfo t3
+		 WHERE T.CUSTOM_ID = T1.CUSTOMERID
+		 AND t.deal_code = t2.business_code_id
+		 AND t1.customerid = t4.tbasmaccount_id
+     		AND t4.physicscardno = t3.id
+		 <include refid="other-condition" />
+		 ORDER BY t.deal_time
+		 )row_ where rownum &lt;=#end# ) where rownum_ &gt;=#start#	
+	</select>
+	
+	<resultMap id="resultDoorRecord" class="doorDetailBody">
+            <result property="account" column="account" jdbcType="VARCHAR" />
+            <result property="cardno" column="cardno" jdbcType="VARCHAR" />
+            <result property="name" column="name" jdbcType="VARCHAR" />
+            <result property="termname" column="termname" jdbcType="VARCHAR" />
+            <result property="doorname" column="doorname" jdbcType="VARCHAR" />
+            <result property="rectime" column="rectime" jdbcType="VARCHAR" />
+	</resultMap>
+	
+	<!-- 门禁记录 -->	
+	<select id="countDoorRecord" resultClass="int" parameterClass="searchQuery">
+		SELECT count(t.hash_value)
+	      FROM $tableName$ T,tbcardinfo t1,tb_customer_info t2,tbbatchcardinfo t3
+	      where T.RECORD_TYPE = 1
+	      AND t.card_no = t1.cardno
+	      AND t1.tbasmaccount_id = t2.customerid
+	      AND t1.physicscardno = t3.id
+		 <include refid="other-condition_door" />
+	</select>
+	
+	<select id="queryDoorRecord" resultMap="resultDoorRecord" parameterClass="searchQuery">
+		select * from (select row_.*, rownum rownum_ from (
+		SELECT t1.tbasmaccount_id ACCOUNT,
+		       T1.cardno cardno,
+		       t.cust_name NAME,
+		       T.TERM_NAME termname,
+		       T.DOOR_NAME doorname,
+		       TO_CHAR(T.OPEN_DOOR_TIME, 'yyyy-MM-dd HH24:mi:ss') rectime
+		  FROM $tableName$ T,Tbcardinfo t1,tbbatchcardinfo t3
+		 WHERE T.RECORD_TYPE = 1
+		 AND t.card_no = t1.cardno
+		 AND t1.physicscardno = t3.id
+		 <include refid="other-condition_door" />
+		 ORDER BY T.OPEN_DOOR_TIME
+		)row_ where rownum &lt;=#end# ) where rownum_ &gt;=#start#
+	</select>
+	
+	<resultMap id="resultAttendanceRecord" class="attDetailBody">
+            <result property="account" column="account" jdbcType="VARCHAR" />
+            <result property="cardno" column="cardno" jdbcType="VARCHAR" />
+            <result property="name" column="name" jdbcType="VARCHAR" />
+            <result property="termname" column="termname" jdbcType="VARCHAR" />
+            <result property="rectime" column="rectime" jdbcType="VARCHAR" />
+            <result property="flowtype" column="flowtype" jdbcType="VARCHAR" />
+	</resultMap>
+	
+	<!-- 考勤记录 -->
+	<select id="countAttDetail" resultClass="int" parameterClass="searchQuery">
+		SELECT count(t.hash_value)
+	      FROM $tableName$ T, TB_TERM_BASE_PARAMETER T1,tb_customer_info t2,tbcardinfo t4,
+       		tbbatchcardinfo t3
+	     WHERE T.TERM_SERIAL_NO = T1.TERMSERIALNO(+)
+	     AND t.account_id = t2.customerid
+	     AND t2.customerid = t4.tbasmaccount_id
+   		 AND t4.physicscardno = t3.id	
+		<include refid="other-condition_att" />
+	</select>
+
+	<select id="queryAttDetailRecord" resultMap="resultAttendanceRecord" parameterClass="searchQuery">
+		 select * from (select row_.*, rownum rownum_ from ( 
+		  SELECT t2.customername NAME,
+		       t.account_id ACCOUNT,
+		       T4.CARDNO cardno,
+		       TO_CHAR(T.DEAL_TIME, 'yyyy-MM-dd HH24:mi:ss') rectime,
+		       NVL(T1.TERMNAME, '人工签到') TERMNAME,
+		       DECODE(T1.TERMNAME, NULL, '人工签到', DECODE(t.water_type,1,'正常打卡',2,'非正常打卡')) FLOWTYPE
+		  FROM $tableName$ T, TB_TERM_BASE_PARAMETER T1,tb_customer_info t2,tbcardinfo t4,
+       		tbbatchcardinfo t3
+		 WHERE T.TERM_SERIAL_NO = T1.TERMSERIALNO(+)
+		 AND t.account_id = t2.customerid
+		 AND t2.customerid = t4.tbasmaccount_id
+   		 AND t4.physicscardno = t3.id
+		 <include refid="other-condition_att" />
+		 ORDER BY T.DEAL_TIME
+		 )row_ where rownum &lt;=#end# ) where rownum_ &gt;=#start#	
+	</select>
+	
+	
+	<!-- *****************************以下是同步**************************** -->
+	
+	<insert id="insertOrg" parameterClass="com.yqsh.ifmp.model.SynOrgRequest">
+		insert into TBBASEORGANIZE (ORGANIZE_ID,baseid,
+		ORGANIZE_NAME,ORGANIZE_DESCRIPTION,
+		ORGANIZE_LEVEL,ZONE_CODE) 
+		values (#orgcode#,1,#orgname#,#orgInfo#,#level#,-1)
+	</insert>
+	<update id="updateOrg" parameterClass="com.yqsh.ifmp.model.SynOrgRequest">
+		update TBBASEORGANIZE set ORGANIZE_NAME = #orgname# where ORGANIZE_ID = #orgcode#
+	</update>
+	<select id="getOrgByCode" resultClass="int">
+		select count(ORGANIZE_ID) from TBBASEORGANIZE where ORGANIZE_ID = #value#
+	</select>
+	
+	
+	<insert id="insertCustomer" parameterClass="com.yqsh.ifmp.model.SynCustomerRequest">
+		insert into TB_CUSTOMER_INFO 
+		(CUSTOMERID,CUSTOMERNAME,CUSTOMERCERTTYPE,CUSTOMERCERTNO,CUSTOMERMOBILE,
+		CUSTOMERDEPT,CUSTOMERSEX,CUSTOMERINDUSTRYNO,CUSTOMER_TYPE,
+		CUSTOMER_STATE) 
+		values (#id#,#name#,'13_000001',#idcard#,#phone#,#orgcode#,(SELECT b.DICTIONARYCODE FROM TB_BASE_DICTIONARY b 
+		WHERE b.DICTIONARYNAME = #sex#),
+		#custno#,(SELECT b.DICTIONARYCODE FROM TB_BASE_DICTIONARY b 
+		WHERE b.DICTIONARYNAME = #customerType#),1)
+	</insert>
+	
+	<update id="updateCustomer" parameterClass="com.yqsh.ifmp.model.SynCustomerRequest">
+		update TB_CUSTOMER_INFO set CUSTOMERINDUSTRYNO=#custno#,
+		CUSTOMERNAME=#name#,CUSTOMERSEX=(SELECT b.DICTIONARYCODE FROM TB_BASE_DICTIONARY b 
+		WHERE b.DICTIONARYNAME = #sex#),CUSTOMERDEPT=#orgcode#,
+		CUSTOMERMOBILE=#phone#
+		where CUSTOMERCERTNO = #idcard#
+	</update>
+	<delete id="deleteCustomer">
+		delete from TB_CUSTOMER_INFO where CUSTOMERCERTNO = #value#
+	</delete>
+	<select id="getCustomerByIdcard" resultClass="string">
+		select CUSTOMERID from TB_CUSTOMER_INFO where CUSTOMERCERTNO = #value# AND rownum=1
+	</select>
+	<select id="getMaxAccountID" resultClass="string">
+		select max(CUSTOMERID) from TB_CUSTOMER_INFO
+	</select>
+	<insert id="insertAccount" parameterClass="com.yqsh.ifmp.model.SynCustomerRequest">
+	<selectKey resultClass="int" keyProperty="id">
+		 SELECT	seq_tbasmaccount.NEXTVAL AS ID FROM DUAL 
+		</selectKey>
+		INSERT INTO tbasmaccount (tbasmaccount_id,tbasmgroup_id,tbasmaccounttype_id,available)
+		VALUES (#id#,574,59,1)
+	</insert>
+	
+	<select id="getCustomerIsCreateCard" resultClass="int">
+		select count(t.CUSTOMERID) from TB_CUSTOMER_INFO t,TBCARDINFO t1
+		 where t.CUSTOMERID = t1.TBASMACCOUNT_ID AND 
+		 t1.CARDSTAT != '40' AND
+		 CUSTOMERCERTNO = #value#
+	</select>
+	<!-- *****************************同步结束**************************** -->
+	
+	<resultMap id="resultSubsidyRecord" class="subsidyDetailBody">
+		<result property="name" column="name" jdbcType="VARCHAR" />
+		<result property="iccid" column="iccid" jdbcType="VARCHAR" />
+        <result property="money" column="amount" jdbcType="VARCHAR" />
+        <result property="orderdate" column="orderdate" jdbcType="VARCHAR" />
+        <result property="orderid" column="orderid" jdbcType="VARCHAR" />
+        <result property="cardid" column="cardid" jdbcType="VARCHAR" />
+        <result property="isdown" column="isdown" jdbcType="VARCHAR" />
+	</resultMap>
+	
+	<select id="countSubsidyDetail" resultClass="int" parameterClass="searchQuery">
+			SELECT 
+			COUNT(*)
+			FROM TB_YZF_RECORD t1
+			WHERE
+			1=1
+			<include refid="other-condition_sub"/>
+	</select>
+	
+	<select id="resultSubsidyDetail" resultMap="resultSubsidyRecord" parameterClass="searchQuery">
+		select * 
+		from
+		(
+			select 
+			row_.*, rownum rownum_ 
+			from
+				(
+				select 
+				t1.name name, t1.iccid iccid, t1.amount amount, t1.orderdate orderdate, t1.orderid orderid, t2.card_id cardid, t2.is_down isdown 
+				from 
+				TB_YZF_RECORD t1, FIN_SUBSIDY_INFO t2 
+				where 
+				t1.orderid = t2.source_id 
+				<include refid="other-condition_sub"/>
+				order by orderdate 
+				) row_ 
+			where 
+			rownum &lt;= #end# 
+			) 
+		where 
+		rownum_ &gt;= #start# 
+	</select>
+	
+	<!-- 根据名称查询菜品信息 -->
+	<select id="getBigDishesByCode" resultClass="com.yqsh.ifmp.common.model.BigDishes" parameterClass="string">
+		SELECT id,CODE, NAME, remark FROM TB_BIG_DISHES where code=#code# 
+	</select>
+	<select id="getSmallDishesByCode" resultClass="com.yqsh.ifmp.common.model.SmallDishes" parameterClass="string">
+		SELECT id,CODE, NAME, big_code bigCode, remark FROM tb_small_dishes  where code=#code#
+	</select>
+	<select id="getDetailDishesByCode" resultClass="com.yqsh.ifmp.common.model.DetailDishes" parameterClass="string">
+		SELECT id,CODE, NAME, unit_price unitPrice, unit, discount, small_code smallCode, remark FROM tb_detail_dishes  where code=#code#
+	</select>
+	
+	<!-- 插入菜品信息 -->
+	<insert id="insertBigDishes" parameterClass="com.yqsh.ifmp.common.model.BigDishes">
+		<selectKey resultClass="int" keyProperty="id">
+			SELECT seq_tbbigdishes.NEXTVAL AS ID FROM DUAL
+		</selectKey>
+		insert into TB_BIG_DISHES (id,code,name,remark) values (#id#,#code#,#name#,#remark#)
+	</insert>
+	<insert id="insertSmallDishes" parameterClass="com.yqsh.ifmp.common.model.SmallDishes">
+		<selectKey resultClass="int" keyProperty="id">
+			SELECT seq_tbsmalldishes.NEXTVAL AS ID FROM DUAL
+		</selectKey>
+		insert into TB_small_DISHES (id,code,name,big_code,remark) values (#id#,#code#,#name#,#bigCode#,#remark#)
+	</insert>
+	<insert id="insertDetailDishes" parameterClass="com.yqsh.ifmp.common.model.DetailDishes">
+		<selectKey resultClass="int" keyProperty="id">
+			SELECT seq_tbdetaildishes.NEXTVAL AS ID FROM DUAL
+		</selectKey>
+		INSERT INTO tb_detail_dishes
+		  (id,CODE, NAME, unit_price, unit, discount, small_code, remark)
+		VALUES
+		  (#id#,#code#, #name#, #unitPrice#, #unit#, #discount#, #smallCode#, #remark#)
+	</insert>
+	
+	
+	<!-- 修改菜品信息 -->
+	<update id="updateBigDishes" parameterClass="com.yqsh.ifmp.common.model.BigDishes">
+		update TB_BIG_DISHES set code=#code#,name = #name#,remark=#remark# where id = #id#
+	</update>
+	<update id="updateSmallDishes" parameterClass="com.yqsh.ifmp.common.model.SmallDishes">
+		update TB_small_DISHES set code=#code#,name = #name#,big_code=#bigCode#,remark=#remark# where id = #id#
+	</update>
+	<update id="updateDetailDishes" parameterClass="com.yqsh.ifmp.common.model.DetailDishes">
+		UPDATE tb_detail_dishes
+		   SET code=#code#,NAME = #name#,
+		       unit_price = #unitPrice#,
+		       unit = #unit#,
+		       discount = #discount#,
+		       small_code = #smallCode#,
+		       remark = #remark#
+		 WHERE id = #id#
+	</update>
+	
+	
+	<resultMap id="DishesDetailDataResultMap" class="com.yqsh.ifmp.model.DishesFlowData" >
+		<result column="CUSTOMERNAME" property="selUser" jdbcType="VARCHAR" />
+		<result column="card_no" property="cardNo" jdbcType="VARCHAR" />
+		<result column="term_no" property="termNo" jdbcType="Integer" />
+		<result column="TERMNAME" property="termName" jdbcType="VARCHAR" />
+	    <result column="code" property="dishNo" jdbcType="VARCHAR" />
+	    <result column="NAME" property="dishName" jdbcType="VARCHAR" />
+	    <result column="DISH_COUNT" property="selCount" jdbcType="Integer" />
+	    <result column="DISH_PRICE" property="dishPrice" jdbcType="VARCHAR" />
+	    <result column="dish_money" property="selMoney" jdbcType="VARCHAR" />
+	    <result column="DEAL_TIME" property="selTime" jdbcType="VARCHAR" />
+    </resultMap>
+    <select id="countDishesFlowData" resultClass="int" parameterClass="searchQuery"> 
+        SELECT count(1)
+		  FROM FIN_DISHES_FLOW_INFO   T,
+		       TB_CUSTOMER_INFO       T1,
+		       TB_DETAIL_DISHES       T2,
+		       TB_TERM_DISHES         T3,
+		       TB_TERM_BASE_PARAMETER T4
+		 WHERE T.TERM_NO = T3.TERM_NO
+		   AND T.DISH_NO = T3.KEY_NO
+		   AND T3.DISH_NO = T2.CODE
+		   AND T.CUSTOMER_ID = T1.CUSTOMERID
+		   AND T3.TERM_NO = T4.TERMSERIALNO
+		   <isNotNull prepend="and" property="endtime"> to_char(t.deal_time,'yyyy-MM-dd') &lt;= #endtime#</isNotNull>
+		   <isNotNull prepend="and" property="begintime"> to_char(t.deal_time,'yyyy-MM-dd') &gt;= #begintime#</isNotNull>
+		   <isNotNull prepend="and" property="dishNo"> T2.CODE in ($dishNo$)</isNotNull>
+		   order by T.TERM_NO,t.deal_time
+    </select>
+	<select id="getDishesFlowData" resultMap="DishesDetailDataResultMap" parameterClass="searchQuery">
+		select * from (select row_.*, rownum rownum_ from (
+		SELECT T1.CUSTOMERNAME,
+		       t.term_no,
+		       T4.TERMNAME,
+		       t.card_no,
+		       t2.code,
+		       T2.NAME,
+		       T.DISH_COUNT,
+		       T.DISH_PRICE,
+		       T.DISH_COUNT * T.DISH_PRICE dish_money,
+		       to_char(T.DEAL_TIME,'yyyy-MM-dd HH24:mi:ss') DEAL_TIME
+		  FROM FIN_DISHES_FLOW_INFO   T,
+		       TB_CUSTOMER_INFO       T1,
+		       TB_DETAIL_DISHES       T2,
+		       TB_TERM_DISHES         T3,
+		       TB_TERM_BASE_PARAMETER T4
+		 WHERE T.TERM_NO = T3.TERM_NO
+		   AND T.DISH_NO = T3.KEY_NO
+		   AND T3.DISH_NO = T2.CODE
+		   AND T.CUSTOMER_ID = T1.CUSTOMERID
+		   AND T3.TERM_NO = T4.TERMSERIALNO
+		   <isNotNull prepend="and" property="endtime"> to_char(t.deal_time,'yyyy-MM-dd') &lt;= #endtime#</isNotNull>
+		   <isNotNull prepend="and" property="begintime"> to_char(t.deal_time,'yyyy-MM-dd') &gt;= #begintime#</isNotNull>
+		   <isNotNull prepend="and" property="dishNo"> T2.CODE in ($dishNo$)</isNotNull>
+		   order by T.TERM_NO,t.deal_time
+		   )row_ where rownum &lt;=#end# ) where rownum_ &gt;=#start#	
+	</select>
+	
+</sqlMap>
